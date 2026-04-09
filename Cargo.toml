@@ -1,0 +1,34 @@
+[workspace]
+resolver = "2"
+members = ["examples/dioxus-native-in-bevy", "examples/bevy-in-dioxus-native"]
+
+[workspace.package]
+version = "0.7.5"
+
+# dependencies that are shared across packages
+[workspace.dependencies]
+wgpu = { version = "26.0.1" }
+
+bevy = "0.17"
+
+dioxus = { version = "0.7.4" }
+dioxus-native = { version = "0.7.4" }
+dioxus-native-dom = { version = "0.7.4" }
+dioxus-asset-resolver = { version = "0.7.4" }
+dioxus-devtools = { version = "0.7.4" }
+
+blitz-dom = { version = "0.2.4", default-features = false }
+blitz-paint = { version = "0.2" }
+blitz-traits = { version = "0.2" }
+data-url = "0.3.2"
+
+anyrender_vello = { version = "0.6", default-features = false }
+vello = { version = "0.6", default-features = false }
+
+color = "0.3.2"
+tracing-subscriber = { version = "0.3.20", default-features = false }
+bytes = "1.10.1"
+async-std = "1.13.1"
+crossbeam-channel = "0.5"
+paste = "1.0.12"
+rustc-hash = "2.1.1"
