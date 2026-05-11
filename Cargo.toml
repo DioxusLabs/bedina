@@ -7,28 +7,33 @@ version = "0.7.5"
 
 # dependencies that are shared across packages
 [workspace.dependencies]
-wgpu = { version = "26.0.1" }
+wgpu = { version = "29.0.3" }
 
-bevy = "0.17"
+bevy = { git = "https://github.com/bevyengine/bevy", rev = "2002a188e0e106eacf56b854dfaff4eca8839584" }
 
-dioxus = { version = "0.7.8" }
-dioxus-native = { version = "0.7.8" }
-dioxus-native-dom = { version = "0.7.8" }
+dioxus = { version = "0.7.8", default-features = false }
 dioxus-asset-resolver = { version = "0.7.8" }
 dioxus-devtools = { version = "0.7.8" }
 
-blitz-dom = { version = "0.2.4", default-features = false }
-blitz-paint = { version = "0.2" }
-blitz-traits = { version = "0.2" }
+blitz-dom = { git = "https://github.com/dioxuslabs/blitz", rev = "6b5d62f64cacee43e2e242fbad9da6eea64bfcc9", default-features = false }
+blitz-paint = { git = "https://github.com/dioxuslabs/blitz", rev = "6b5d62f64cacee43e2e242fbad9da6eea64bfcc9" }
+blitz-traits = { git = "https://github.com/dioxuslabs/blitz", rev = "6b5d62f64cacee43e2e242fbad9da6eea64bfcc9" }
+dioxus-native = { git = "https://github.com/dioxuslabs/blitz", rev = "6b5d62f64cacee43e2e242fbad9da6eea64bfcc9" }
+dioxus-native-dom = { git = "https://github.com/dioxuslabs/blitz", rev = "6b5d62f64cacee43e2e242fbad9da6eea64bfcc9" }
 data-url = "0.3.2"
 
-anyrender_vello = { version = "0.6", default-features = false }
-vello = { version = "0.6", default-features = false }
+anyrender = { git = "https://github.com/dioxuslabs/anyrender", rev = "84bbfa68ace0af62102cf85f60bc8d76b3d398c2", default-features = false }
+anyrender_vello = { git = "https://github.com/dioxuslabs/anyrender", rev = "84bbfa68ace0af62102cf85f60bc8d76b3d398c2", default-features = false }
+vello = { git = "https://github.com/linebender/vello", rev = "7023c3f03deff7100d2fc2e361959a439f14a3b7", default-features = false }
 
 color = "0.3.2"
+peniko = "0.6.0"
 tracing-subscriber = { version = "0.3.20", default-features = false }
 bytes = "1.10.1"
 async-std = "1.13.1"
 crossbeam-channel = "0.5"
 paste = "1.0.12"
 rustc-hash = "2.1.1"
+
+[patch.crates-io]
+kurbo = { git = "https://github.com/linebender/kurbo", rev = "6836244" }

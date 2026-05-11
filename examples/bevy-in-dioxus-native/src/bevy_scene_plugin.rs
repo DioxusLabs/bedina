@@ -1,5 +1,5 @@
 use crate::bevy_renderer::UIData;
-use bevy::prelude::*;
+use bevy::{camera::RenderTarget, prelude::*};
 
 #[derive(Component)]
 pub struct DynamicColoredCube;
@@ -35,20 +35,22 @@ fn setup(
         DirectionalLight {
             color: bevy::color::Color::WHITE,
             illuminance: 10000.0,
-            shadows_enabled: false,
+            shadow_maps_enabled: false,
             ..default()
         },
         Transform::from_xyz(1.0, 1.0, 1.0).looking_at(Vec3::ZERO, Vec3::Y),
     ));
 
-    commands.insert_resource(AmbientLight {
-        color: bevy::color::Color::WHITE,
-        brightness: 100.0,
-        affects_lightmapped_meshes: true,
-    });
-
     commands.spawn((
         Camera3d::default(),
+        RenderTarget::None {
+            size: UVec2 { x: 0, y: 0 },
+        }, // Set later
+        AmbientLight {
+            color: bevy::color::Color::WHITE,
+            brightness: 100.0,
+            affects_lightmapped_meshes: true,
+        },
         Transform::from_xyz(0.0, 0.0, 3.0).looking_at(Vec3::new(0.0, 0.0, 0.0), Vec3::Y),
         Name::new("MainCamera"),
     ));
@@ -68,7 +70,7 @@ fn update_cube_color(
 ) {
     if ui.is_changed() {
         for mesh_material in cube_query.iter() {
-            if let Some(material) = materials.get_mut(&mesh_material.0) {
+            if let Some(mut material) = materials.get_mut(&mesh_material.0) {
                 let [r, g, b] = ui.color;
                 material.base_color = bevy::color::Color::srgb(r, g, b);
             }

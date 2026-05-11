@@ -2,9 +2,8 @@ use std::any::Any;
 
 use color::{palette::css::WHITE, parse_color};
 use color::{OpaqueColor, Srgb};
-use demo_renderer::{DemoMessage, DemoPaintSource};
-use dioxus_native::prelude::*;
-use dioxus_native::use_wgpu;
+use demo_renderer::{DemoMessage, DemoWidget};
+use dioxus_native::{prelude::*, CustomWidgetAttr};
 use wgpu::Limits;
 
 mod bevy_renderer;
@@ -90,21 +89,20 @@ fn ColorControl(label: &'static str, color_str: WriteSignal<String>) -> Element 
 
 #[component]
 fn SpinningCube(color: Memo<Color>) -> Element {
-    // Create custom paint source and register it with the renderer
-    let paint_source = DemoPaintSource::new();
-    let sender = paint_source.sender();
-    let paint_source_id = use_wgpu(move || paint_source);
+    let (sender, demo_widget_attr) = use_hook(|| {
+        let demo_widget = DemoWidget::new();
+        let sender = demo_widget.sender();
+        let attr = CustomWidgetAttr::new(demo_widget);
+        (sender, attr)
+    });
 
     use_effect(move || {
         sender.send(DemoMessage::SetColor(color())).unwrap();
     });
 
     rsx!(
-        div { id:"canvas-container",
-            canvas {
-                id: "demo-canvas",
-                "src": paint_source_id
-            }
+        div { id: "canvas-container",
+            object { id: "demo-canvas", "data": demo_widget_attr }
         }
     )
 }
