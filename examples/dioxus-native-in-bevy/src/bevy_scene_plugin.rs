@@ -89,20 +89,19 @@ fn setup(
         DirectionalLight {
             color: bevy::color::Color::WHITE,
             illuminance: 10000.0,
-            shadows_enabled: false,
+            shadow_maps_enabled: false,
             ..default()
         },
         Transform::from_xyz(1.0, 1.0, 1.0).looking_at(Vec3::ZERO, Vec3::Y),
     ));
 
-    commands.insert_resource(AmbientLight {
-        color: bevy::color::Color::WHITE,
-        brightness: 100.0,
-        affects_lightmapped_meshes: true,
-    });
-
     commands.spawn((
         Camera3d::default(),
+        AmbientLight {
+            color: bevy::color::Color::WHITE,
+            brightness: 100.0,
+            affects_lightmapped_meshes: true,
+        },
         Transform::from_xyz(0.0, 0.0, 3.0).looking_at(Vec3::new(0.0, 0.0, 0.0), Vec3::Y),
         Name::new("MainCamera"),
         OrbitCamera::default(),
@@ -125,7 +124,7 @@ fn sync_with_ui(
         match message {
             UIMessage::CubeColor(c) => {
                 for cube_material in cube_query.iter() {
-                    if let Some(material) = materials.get_mut(&cube_material.0) {
+                    if let Some(mut material) = materials.get_mut(&cube_material.0) {
                         material.base_color = Color::Srgba(bevy::color::Srgba::from_f32_array(c));
                     }
                 }

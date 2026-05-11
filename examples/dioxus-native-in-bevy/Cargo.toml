@@ -12,6 +12,7 @@ publish = false
 default = ["hot-reload"]
 tracing = ["dep:tracing-subscriber", "dioxus-native-dom/tracing"]
 hot-reload = ["dep:dioxus-devtools"]
+debug = ["bevy/debug"]
 
 [dependencies]
 dioxus = { workspace = true, features = ["document", "signals", "hooks", "html", "macro", "asset"]}
