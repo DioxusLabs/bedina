@@ -15,15 +15,15 @@ dioxus = { version = "0.7.8", default-features = false }
 dioxus-asset-resolver = { version = "0.7.8" }
 dioxus-devtools = { version = "0.7.8" }
 
-blitz-dom = { git = "https://github.com/dioxuslabs/blitz", rev = "6b5d62f64cacee43e2e242fbad9da6eea64bfcc9", default-features = false }
-blitz-paint = { git = "https://github.com/dioxuslabs/blitz", rev = "6b5d62f64cacee43e2e242fbad9da6eea64bfcc9" }
-blitz-traits = { git = "https://github.com/dioxuslabs/blitz", rev = "6b5d62f64cacee43e2e242fbad9da6eea64bfcc9" }
-dioxus-native = { git = "https://github.com/dioxuslabs/blitz", rev = "6b5d62f64cacee43e2e242fbad9da6eea64bfcc9" }
-dioxus-native-dom = { git = "https://github.com/dioxuslabs/blitz", rev = "6b5d62f64cacee43e2e242fbad9da6eea64bfcc9" }
+blitz-dom = { git = "https://github.com/dioxuslabs/blitz", rev = "01b602382de766d77d1c372a689d407a2a64a4d4", default-features = false }
+blitz-paint = { git = "https://github.com/dioxuslabs/blitz", rev = "01b602382de766d77d1c372a689d407a2a64a4d4" }
+blitz-traits = { git = "https://github.com/dioxuslabs/blitz", rev = "01b602382de766d77d1c372a689d407a2a64a4d4" }
+dioxus-native = { git = "https://github.com/dioxuslabs/blitz", rev = "01b602382de766d77d1c372a689d407a2a64a4d4" }
+dioxus-native-dom = { git = "https://github.com/dioxuslabs/blitz", rev = "01b602382de766d77d1c372a689d407a2a64a4d4" }
 data-url = "0.3.2"
 
-anyrender = { git = "https://github.com/dioxuslabs/anyrender", rev = "84bbfa68ace0af62102cf85f60bc8d76b3d398c2", default-features = false }
-anyrender_vello = { git = "https://github.com/dioxuslabs/anyrender", rev = "84bbfa68ace0af62102cf85f60bc8d76b3d398c2", default-features = false }
+anyrender = { git = "https://github.com/dioxuslabs/anyrender", rev = "6b19c229c147b8143eb649bffb868fc323e956fe", default-features = false }
+anyrender_vello = { git = "https://github.com/dioxuslabs/anyrender", rev = "6b19c229c147b8143eb649bffb868fc323e956fe", default-features = false }
 vello = { git = "https://github.com/linebender/vello", rev = "7023c3f03deff7100d2fc2e361959a439f14a3b7", default-features = false }
 
 color = "0.3.2"
