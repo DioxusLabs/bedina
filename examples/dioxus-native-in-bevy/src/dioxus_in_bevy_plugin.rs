@@ -637,7 +637,7 @@ fn handle_keyboard_events(
             is_composing: false,
             state: key_state,
             // Mismatched versions of SmolStr
-            text: event.text.as_ref().map(|text| SmolStr::new(text)),
+            text: event.text.as_ref().map(SmolStr::new),
         };
 
         match key_state {
@@ -747,10 +747,11 @@ impl NetProvider for BevyNetProvider {
     ) {
         match request.url.scheme() {
             // Load Dioxus assets
-            "dioxus" => match dioxus_asset_resolver::native::serve_asset(request.url.path()) {
-                Ok(res) => handler.bytes(request.url.to_string(), res.into_body().into()),
-                Err(_) => {}
-            },
+            "dioxus" => {
+                if let Ok(res) = dioxus_asset_resolver::native::serve_asset(request.url.path()) {
+                    handler.bytes(request.url.to_string(), res.into_body().into());
+                }
+            }
             // Decode data URIs
             "data" => {
                 let Ok(data_url) = DataUrl::process(request.url.as_str()) else {

@@ -97,7 +97,7 @@ impl BevyRenderer {
         // Run one frame of the Bevy app to render the 3D scene.
         self.app.update();
 
-        self.texture_handle.clone()
+        self.texture_handle
     }
 
     fn init_texture(&mut self, ctx: &mut dyn RenderContext, width: u32, height: u32) {
