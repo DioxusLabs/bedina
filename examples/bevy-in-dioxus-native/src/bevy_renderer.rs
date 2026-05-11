@@ -1,7 +1,9 @@
-use crate::bevy_scene_plugin::BevyScenePlugin;
+// use crate::bevy_scene_plugin::BevyScenePlugin;
+use crate::mesh_picking_plugin::BevyMeshScenePlugin;
 use anyrender::{RenderContext, ResourceId};
 use bevy::{
     camera::{ManualTextureViewHandle, RenderTarget},
+    picking::pointer::{Location, PointerInput},
     prelude::*,
     render::{
         render_resource::TextureFormat,
@@ -13,7 +15,9 @@ use bevy::{
         texture::ManualTextureView,
         RenderPlugin,
     },
+    window::{PrimaryWindow, WindowEvent},
 };
+use blitz_traits::events::UiEvent;
 use dioxus_native::DeviceHandle;
 use std::sync::Arc;
 
@@ -64,7 +68,8 @@ impl BevyRenderer {
         app.insert_resource(UIData::default());
 
         // Add the Bevy scene.
-        app.add_plugins(BevyScenePlugin {});
+        // app.add_plugins(BevyScenePlugin {});
+        app.add_plugins(BevyMeshScenePlugin {});
 
         // Initialize the app to set up the render world properly.
         app.finish();
@@ -76,6 +81,57 @@ impl BevyRenderer {
             last_texture_size: (0, 0),
             texture_handle: None,
             manual_texture_view_handle: None,
+        }
+    }
+
+    pub fn handle_input_event(&mut self, event: &UiEvent) {
+        let world = self.app.world_mut();
+
+        // let mut query = world.query::<(Entity, &PrimaryWindow)>();
+        // let Some(primary_window_entity) = query.iter(&world).next().map(|e| e.0) else {
+        //     return;
+        // };
+
+        let Some(texture_view) = self.manual_texture_view_handle.clone() else {
+            return;
+        };
+
+        match event {
+            UiEvent::PointerMove(event) => {
+                // let window_event = WindowEvent::CursorMoved(CursorMoved {
+                //     window: primary_window_entity,
+                //     position: Vec2 {
+                //         x: event.coords.page_x,
+                //         y: event.coords.page_y,
+                //     },
+                //     delta: None,
+                // });
+
+                let event = PointerInput {
+                    pointer_id: bevy::picking::pointer::PointerId::Mouse,
+                    location: Location {
+                        position: Vec2 {
+                            x: event.coords.page_x,
+                            y: event.coords.page_y,
+                        },
+                        target: bevy::camera::NormalizedRenderTarget::TextureView(texture_view),
+                    },
+                    action: bevy::picking::pointer::PointerAction::Move {
+                        delta: Vec2 { x: 10.0, y: 10.0 },
+                    },
+                };
+
+                dbg!(&event);
+
+                world.write_message(event);
+            }
+            UiEvent::PointerUp(_) => { /* todo */ }
+            UiEvent::PointerDown(_) => { /* todo */ }
+            UiEvent::Wheel(_) => { /* todo */ }
+            UiEvent::KeyUp(_) => { /* todo */ }
+            UiEvent::KeyDown(_) => { /* todo */ }
+            UiEvent::Ime(_) => { /* todo */ }
+            UiEvent::AppleStandardKeybinding(_) => { /* todo */ }
         }
     }
 

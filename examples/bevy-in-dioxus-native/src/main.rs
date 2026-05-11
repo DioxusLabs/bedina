@@ -8,6 +8,7 @@ use wgpu::Limits;
 
 mod bevy_renderer;
 mod bevy_scene_plugin;
+mod mesh_picking_plugin;
 mod demo_renderer;
 
 // CSS Styles

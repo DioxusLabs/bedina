@@ -98,7 +98,9 @@ impl Widget for DemoWidget {
     }
 
     fn handle_event(&mut self, event: &UiEvent) {
-        let _ = event;
+        if let DemoRendererState::Active(state) = &mut self.state {
+            state.handle_input_event(event);
+        }
     }
 
     fn paint(
