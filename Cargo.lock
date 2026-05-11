@@ -2845,11 +2845,18 @@ version = "0.7.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7c01ecf7ddbae18a419ad3d83c486101a85ffc5740ea09cdd0f09a30dc12170d"
 dependencies = [
+ "dioxus-asset-resolver",
  "dioxus-config-macros",
  "dioxus-core",
+ "dioxus-core-macro",
  "dioxus-document",
  "dioxus-history",
+ "dioxus-hooks",
+ "dioxus-html",
+ "dioxus-signals",
+ "dioxus-stores",
  "dioxus-web",
+ "manganis",
  "subsecond",
 ]
 

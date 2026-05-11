@@ -25,9 +25,10 @@ use anyrender_vello::VelloScenePainter;
 use blitz_dom::{Document as _, DocumentConfig};
 use blitz_paint::paint_scene;
 use blitz_traits::events::{
-    BlitzKeyEvent, BlitzMouseButtonEvent, KeyState, MouseEventButton, MouseEventButtons, UiEvent,
+    BlitzKeyEvent, BlitzPointerEvent, BlitzPointerId, KeyState, MouseEventButton,
+    MouseEventButtons, PointerCoords, PointerDetails, UiEvent,
 };
-use blitz_traits::net::{NetCallback, NetProvider};
+use blitz_traits::net::{NetHandler, NetProvider, NetWaker};
 use blitz_traits::shell::{ColorScheme, Viewport};
 use bytes::Bytes;
 use crossbeam_channel::{Receiver, Sender};
@@ -66,7 +67,9 @@ impl<UIProps: std::marker::Send + std::marker::Sync + std::clone::Clone + 'stati
         let mut dioxus_doc = DioxusDocument::new(vdom, DocumentConfig::default());
 
         // Setup NetProvider
-        let net_provider = BevyNetProvider::shared(s.clone());
+        let net_provider = BevyNetProvider::shared(Some(Arc::new(move |doc_id| {
+            s.send(DioxusMessage::ResourceLoad(doc_id))
+        })));
         dioxus_doc.set_net_provider(net_provider);
 
         // Setup DocumentProxy to process CreateHeadElement messages
@@ -233,7 +236,7 @@ struct HeadElement {
 enum DioxusMessage {
     Devserver(DevserverMsg),
     CreateHeadElement(HeadElement),
-    ResourceLoad(blitz_dom::net::Resource),
+    ResourceLoad(usize),
 }
 
 #[derive(Resource, Deref)]
@@ -324,7 +327,7 @@ fn update_ui(
                 dioxus_doc.poll(Some(std::task::Context::from_waker(&waker)));
             }
             DioxusMessage::ResourceLoad(resource) => {
-                dioxus_doc.load_resource(resource);
+                // Do nothing
             }
         };
     }
@@ -348,10 +351,12 @@ fn update_ui(
         // Paint the document
         paint_scene(
             &mut VelloScenePainter::new(&mut scene),
-            &dioxus_doc,
+            &mut dioxus_doc.inner_mut(),
             SCALE_FACTOR as f64,
             texture.width,
             texture.height,
+            0,
+            0,
         );
 
         // Render the `vello::Scene` to the Texture using the `VelloRenderer`
@@ -453,12 +458,21 @@ fn handle_mouse_events(
     for cursor_event in cursor_moved.read() {
         mouse_state.x = cursor_event.position.x;
         mouse_state.y = cursor_event.position.y;
-        dioxus_doc.handle_ui_event(UiEvent::MouseMove(BlitzMouseButtonEvent {
-            x: mouse_state.x,
-            y: mouse_state.y,
+        dioxus_doc.handle_ui_event(UiEvent::MouseMove(BlitzPointerEvent {
+            id: BlitzPointerId::Mouse,
+            is_primary: true,
+            coords: PointerCoords {
+                client_x: mouse_state.x,
+                client_y: mouse_state.y,
+                page_x: mouse_state.x,
+                page_y: mouse_state.y,
+                screen_x: mouse_state.x,
+                screen_y: mouse_state.y,
+            },
             button: Default::default(),
             buttons: mouse_state.buttons,
             mods: mouse_state.mods,
+            details: PointerDetails::default(),
         }));
     }
 
@@ -478,22 +492,40 @@ fn handle_mouse_events(
         match event.state {
             ButtonState::Pressed => {
                 mouse_state.buttons |= buttons_blitz;
-                dioxus_doc.handle_ui_event(UiEvent::MouseDown(BlitzMouseButtonEvent {
-                    x: mouse_state.x,
-                    y: mouse_state.y,
+                dioxus_doc.handle_ui_event(UiEvent::MouseDown(BlitzPointerEvent {
+                    id: BlitzPointerId::Mouse,
+                    is_primary: true,
+                    coords: PointerCoords {
+                        client_x: mouse_state.x,
+                        client_y: mouse_state.y,
+                        page_x: mouse_state.x,
+                        page_y: mouse_state.y,
+                        screen_x: mouse_state.x,
+                        screen_y: mouse_state.y,
+                    },
                     button: button_blitz,
                     buttons: mouse_state.buttons,
                     mods: mouse_state.mods,
+                    details: PointerDetails::default(),
                 }));
             }
             ButtonState::Released => {
                 mouse_state.buttons &= !buttons_blitz;
-                dioxus_doc.handle_ui_event(UiEvent::MouseUp(BlitzMouseButtonEvent {
-                    x: mouse_state.x,
-                    y: mouse_state.y,
+                dioxus_doc.handle_ui_event(UiEvent::MouseUp(BlitzPointerEvent {
+                    id: BlitzPointerId::Mouse,
+                    is_primary: true,
+                    coords: PointerCoords {
+                        client_x: mouse_state.x,
+                        client_y: mouse_state.y,
+                        page_x: mouse_state.x,
+                        page_y: mouse_state.y,
+                        screen_x: mouse_state.x,
+                        screen_y: mouse_state.y,
+                    },
                     button: button_blitz,
                     buttons: mouse_state.buttons,
                     mods: mouse_state.mods,
+                    details: PointerDetails::default(),
                 }));
             }
         }
@@ -651,43 +683,30 @@ struct BevyNetCallback {
     sender: Sender<DioxusMessage>,
 }
 
-use blitz_dom::net::Resource as BlitzResource;
-use blitz_traits::net::NetHandler;
-
-impl NetCallback<BlitzResource> for BevyNetCallback {
-    fn call(&self, _doc_id: usize, result: core::result::Result<BlitzResource, Option<String>>) {
-        if let Ok(res) = result {
-            self.sender.send(DioxusMessage::ResourceLoad(res)).unwrap();
-        }
-    }
-}
-
 pub struct BevyNetProvider {
-    callback: Arc<dyn NetCallback<BlitzResource> + 'static>,
+    waker: Option<Arc<dyn NetWaker>>,
 }
 impl BevyNetProvider {
-    fn shared(sender: Sender<DioxusMessage>) -> Arc<dyn NetProvider<BlitzResource>> {
-        Arc::new(Self::new(sender)) as _
+    fn shared(waker: Option<Arc<dyn NetWaker>>) -> Arc<dyn NetProvider> {
+        Arc::new(Self::new(waker)) as _
     }
 
-    fn new(sender: Sender<DioxusMessage>) -> Self {
-        Self {
-            callback: Arc::new(BevyNetCallback { sender }) as _,
-        }
+    fn new(waker: Option<Arc<dyn NetWaker>>) -> Self {
+        Self { waker }
     }
 }
 
-impl NetProvider<BlitzResource> for BevyNetProvider {
+impl NetProvider for BevyNetProvider {
     fn fetch(
         &self,
         doc_id: usize,
         request: blitz_traits::net::Request,
-        handler: Box<dyn NetHandler<BlitzResource>>,
+        handler: Box<dyn NetHandler>,
     ) {
         match request.url.scheme() {
             // Load Dioxus assets
             "dioxus" => match dioxus_asset_resolver::native::serve_asset(request.url.path()) {
-                Ok(res) => handler.bytes(doc_id, res.into_body().into(), self.callback.clone()),
+                Ok(res) => handler.bytes(request.url.to_string(), res.into_body().into()),
                 Err(_) => {
                     self.callback.call(
                         doc_id,
@@ -708,14 +727,13 @@ impl NetProvider<BlitzResource> for BevyNetProvider {
                     return;
                 };
                 let bytes = Bytes::from(decoded.0);
-                handler.bytes(doc_id, bytes, Arc::clone(&self.callback));
+                handler.bytes(request.url.to_string(), bytes);
             }
             // TODO: support http requests
-            _ => {
-                self.callback
-                    .call(doc_id, Err(Some(String::from("UnsupportedScheme"))));
-            }
+            _ => {}
         }
+
+        self.waker.wake(doc_id);
     }
 }
 
