@@ -15,11 +15,11 @@ dioxus = { version = "0.7.8", default-features = false }
 dioxus-asset-resolver = { version = "0.7.8" }
 dioxus-devtools = { version = "0.7.8" }
 
-blitz-dom = { git = "https://github.com/dioxuslabs/blitz", rev = "01b602382de766d77d1c372a689d407a2a64a4d4", default-features = false }
-blitz-paint = { git = "https://github.com/dioxuslabs/blitz", rev = "01b602382de766d77d1c372a689d407a2a64a4d4" }
-blitz-traits = { git = "https://github.com/dioxuslabs/blitz", rev = "01b602382de766d77d1c372a689d407a2a64a4d4" }
-dioxus-native = { git = "https://github.com/dioxuslabs/blitz", rev = "01b602382de766d77d1c372a689d407a2a64a4d4" }
-dioxus-native-dom = { git = "https://github.com/dioxuslabs/blitz", rev = "01b602382de766d77d1c372a689d407a2a64a4d4" }
+blitz-dom = { git = "https://github.com/dioxuslabs/blitz", rev = "72cfad9317521e396e87b2d143dd42c3729c0acb", default-features = false }
+blitz-paint = { git = "https://github.com/dioxuslabs/blitz", rev = "72cfad9317521e396e87b2d143dd42c3729c0acb" }
+blitz-traits = { git = "https://github.com/dioxuslabs/blitz", rev = "72cfad9317521e396e87b2d143dd42c3729c0acb" }
+dioxus-native = { git = "https://github.com/dioxuslabs/blitz", rev = "72cfad9317521e396e87b2d143dd42c3729c0acb" }
+dioxus-native-dom = { git = "https://github.com/dioxuslabs/blitz", rev = "72cfad9317521e396e87b2d143dd42c3729c0acb" }
 data-url = "0.3.2"
 
 anyrender = { git = "https://github.com/dioxuslabs/anyrender", rev = "6b19c229c147b8143eb649bffb868fc323e956fe", default-features = false }
