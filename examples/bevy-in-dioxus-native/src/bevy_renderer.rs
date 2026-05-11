@@ -100,7 +100,7 @@ impl BevyRenderer {
         self.texture_handle.clone()
     }
 
-    fn init_texture(&mut self, mut ctx: &mut dyn RenderContext, width: u32, height: u32) {
+    fn init_texture(&mut self, ctx: &mut dyn RenderContext, width: u32, height: u32) {
         // Reuse self.texture_handle if already initialized to the correct size.
         let current_size = (width, height);
         if self.texture_handle.is_some() && self.last_texture_size == current_size {
