@@ -21,14 +21,14 @@
 
 use std::f32::consts::PI;
 
-use bevy::{color::palettes::tailwind::*, picking::pointer::PointerInteraction, prelude::*};
+use bevy::{asset::uuid::Uuid, color::palettes::tailwind::*, picking::pointer::{PointerId, PointerInteraction}, prelude::*};
 
 pub struct BevyMeshScenePlugin {}
 
 impl Plugin for BevyMeshScenePlugin {
     fn build(&self, app: &mut App) {
         // MeshPickingPlugin is not a default plugin
-        app.add_plugins(MeshPickingPlugin);
+        // app.add_plugins(MeshPickingPlugin);
         app.add_systems(Startup, setup_scene);
         app.add_systems(Update, (draw_mesh_intersections, rotate));
     }
@@ -120,6 +120,8 @@ fn setup_scene(
             .observe(update_material_on::<Pointer<Release>>(hover_matl.clone()))
             .observe(rotate_on_drag);
     }
+
+    commands.spawn(PointerId::Custom(Uuid::from_u128(37u128)));
 
     // Ground
     commands.spawn((

@@ -2,20 +2,12 @@
 use crate::mesh_picking_plugin::BevyMeshScenePlugin;
 use anyrender::{RenderContext, ResourceId};
 use bevy::{
-    camera::{ManualTextureViewHandle, RenderTarget},
-    picking::pointer::{Location, PointerInput},
-    prelude::*,
-    render::{
-        render_resource::TextureFormat,
-        renderer::{
+    asset::uuid::Uuid, camera::{ManualTextureViewHandle, RenderTarget}, picking::pointer::{Location, PointerId, PointerInput}, prelude::*, render::{
+        RenderPlugin, render_resource::TextureFormat, renderer::{
             RenderAdapter, RenderAdapterInfo, RenderDevice, RenderInstance, RenderQueue,
             WgpuWrapper,
-        },
-        settings::{RenderCreation, RenderResources},
-        texture::ManualTextureView,
-        RenderPlugin,
-    },
-    window::{PrimaryWindow, WindowEvent},
+        }, settings::{RenderCreation, RenderResources}, texture::ManualTextureView
+    }, window::{PrimaryWindow, WindowEvent}
 };
 use blitz_traits::events::UiEvent;
 use dioxus_native::DeviceHandle;
@@ -32,6 +24,7 @@ pub struct BevyRenderer {
     last_texture_size: (u32, u32),
     texture_handle: Option<ResourceId>,
     manual_texture_view_handle: Option<ManualTextureViewHandle>,
+    last_cursor: Vec2,
 }
 
 impl BevyRenderer {
@@ -39,7 +32,7 @@ impl BevyRenderer {
         // Create a headless Bevy App.
         let mut app = App::new();
         app.add_plugins(
-            DefaultPlugins
+            (DefaultPlugins
                 .set(RenderPlugin {
                     // Reuse the render resources from the Dioxus native renderer.
                     render_creation: RenderCreation::Manual(RenderResources(
@@ -59,6 +52,7 @@ impl BevyRenderer {
                     ..Default::default()
                 })
                 .disable::<bevy::winit::WinitPlugin>(),
+            MeshPickingPlugin)
         );
 
         // Setup the rendering to texture.
@@ -81,6 +75,7 @@ impl BevyRenderer {
             last_texture_size: (0, 0),
             texture_handle: None,
             manual_texture_view_handle: None,
+            last_cursor: Vec2::default(),
         }
     }
 
@@ -107,8 +102,13 @@ impl BevyRenderer {
                 //     delta: None,
                 // });
 
+                let position = Vec2 {
+                    x: event.coords.page_x,
+                    y: event.coords.page_y,
+                };
+
                 let event = PointerInput {
-                    pointer_id: bevy::picking::pointer::PointerId::Mouse,
+                    pointer_id: PointerId::Custom(Uuid::from_u128(37u128)),
                     location: Location {
                         position: Vec2 {
                             x: event.coords.page_x,
@@ -117,9 +117,10 @@ impl BevyRenderer {
                         target: bevy::camera::NormalizedRenderTarget::TextureView(texture_view),
                     },
                     action: bevy::picking::pointer::PointerAction::Move {
-                        delta: Vec2 { x: 10.0, y: 10.0 },
+                        delta: position - self.last_cursor,
                     },
                 };
+                self.last_cursor = position;
 
                 dbg!(&event);
 
