@@ -9,22 +9,22 @@ version = "0.7.5"
 [workspace.dependencies]
 wgpu = { version = "29.0.3" }
 
-bevy = { git = "https://github.com/bevyengine/bevy", rev = "2002a188e0e106eacf56b854dfaff4eca8839584" }
+bevy = { version = "0.19.0-rc.1" }
 
 dioxus = { version = "0.7.8", default-features = false }
 dioxus-asset-resolver = { version = "0.7.8" }
 dioxus-devtools = { version = "0.7.8" }
 
-blitz-dom = { git = "https://github.com/dioxuslabs/blitz", rev = "72cfad9317521e396e87b2d143dd42c3729c0acb", default-features = false }
-blitz-paint = { git = "https://github.com/dioxuslabs/blitz", rev = "72cfad9317521e396e87b2d143dd42c3729c0acb" }
-blitz-traits = { git = "https://github.com/dioxuslabs/blitz", rev = "72cfad9317521e396e87b2d143dd42c3729c0acb" }
-dioxus-native = { git = "https://github.com/dioxuslabs/blitz", rev = "72cfad9317521e396e87b2d143dd42c3729c0acb" }
-dioxus-native-dom = { git = "https://github.com/dioxuslabs/blitz", rev = "72cfad9317521e396e87b2d143dd42c3729c0acb" }
+blitz-dom = { git = "https://github.com/dioxuslabs/blitz", rev = "3c7b62b5ad7a6e6ae044324893a9f422923d68b9", default-features = false }
+blitz-paint = { git = "https://github.com/dioxuslabs/blitz", rev = "3c7b62b5ad7a6e6ae044324893a9f422923d68b9" }
+blitz-traits = { git = "https://github.com/dioxuslabs/blitz", rev = "3c7b62b5ad7a6e6ae044324893a9f422923d68b9" }
+dioxus-native = { git = "https://github.com/dioxuslabs/blitz", rev = "3c7b62b5ad7a6e6ae044324893a9f422923d68b9" }
+dioxus-native-dom = { git = "https://github.com/dioxuslabs/blitz", rev = "3c7b62b5ad7a6e6ae044324893a9f422923d68b9" }
 data-url = "0.3.2"
 
-anyrender = { git = "https://github.com/dioxuslabs/anyrender", rev = "6b19c229c147b8143eb649bffb868fc323e956fe", default-features = false }
-anyrender_vello = { git = "https://github.com/dioxuslabs/anyrender", rev = "6b19c229c147b8143eb649bffb868fc323e956fe", default-features = false }
-vello = { git = "https://github.com/linebender/vello", rev = "7023c3f03deff7100d2fc2e361959a439f14a3b7", default-features = false }
+anyrender = { version = "0.10", default-features = false }
+anyrender_vello = { version = "0.10.1", default-features = false }
+vello = { version = "0.9", default-features = false }
 
 color = "0.3.2"
 peniko = "0.6.0"
@@ -34,6 +34,3 @@ async-std = "1.13.1"
 crossbeam-channel = "0.5"
 paste = "1.0.12"
 rustc-hash = "2.1.1"
-
-[patch.crates-io]
-kurbo = { git = "https://github.com/linebender/kurbo", rev = "6836244" }
