@@ -7,25 +7,27 @@ version = "0.7.5"
 
 # dependencies that are shared across packages
 [workspace.dependencies]
-wgpu = { version = "26.0.1" }
+wgpu = { version = "29.0.3" }
 
-bevy = "0.17"
+bevy = { version = "0.19.0" }
 
-dioxus = { version = "0.7.8" }
-dioxus-native = { version = "0.7.8" }
-dioxus-native-dom = { version = "0.7.8" }
+dioxus = { version = "0.7.8", default-features = false }
 dioxus-asset-resolver = { version = "0.7.8" }
 dioxus-devtools = { version = "0.7.8" }
 
-blitz-dom = { version = "0.2.4", default-features = false }
-blitz-paint = { version = "0.2" }
-blitz-traits = { version = "0.2" }
+blitz-dom = { git = "https://github.com/dioxuslabs/blitz", rev = "0eb4af13dd5daa7a7335946d38289889fb244e32", default-features = false }
+blitz-paint = { git = "https://github.com/dioxuslabs/blitz", rev = "0eb4af13dd5daa7a7335946d38289889fb244e32" }
+blitz-traits = { git = "https://github.com/dioxuslabs/blitz", rev = "0eb4af13dd5daa7a7335946d38289889fb244e32" }
+dioxus-native = { git = "https://github.com/dioxuslabs/blitz", rev = "0eb4af13dd5daa7a7335946d38289889fb244e32" }
+dioxus-native-dom = { git = "https://github.com/dioxuslabs/blitz", rev = "0eb4af13dd5daa7a7335946d38289889fb244e32" }
 data-url = "0.3.2"
 
-anyrender_vello = { version = "0.6", default-features = false }
-vello = { version = "0.6", default-features = false }
+anyrender = { version = "0.11", default-features = false }
+anyrender_vello = { version = "0.11", default-features = false }
+vello = { version = "0.9", default-features = false }
 
 color = "0.3.2"
+peniko = "0.6.0"
 tracing-subscriber = { version = "0.3.20", default-features = false }
 bytes = "1.10.1"
 async-std = "1.13.1"

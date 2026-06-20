@@ -1,4 +1,5 @@
 use crate::bevy_scene_plugin::BevyScenePlugin;
+use anyrender::{RenderContext, ResourceId};
 use bevy::{
     camera::{ManualTextureViewHandle, RenderTarget},
     prelude::*,
@@ -13,7 +14,7 @@ use bevy::{
         RenderPlugin,
     },
 };
-use dioxus_native::{CustomPaintCtx, DeviceHandle, TextureHandle};
+use dioxus_native::DeviceHandle;
 use std::sync::Arc;
 
 #[derive(Resource, Default)]
@@ -25,7 +26,7 @@ pub struct BevyRenderer {
     app: App,
     wgpu_device: wgpu::Device,
     last_texture_size: (u32, u32),
-    texture_handle: Option<TextureHandle>,
+    texture_handle: Option<ResourceId>,
     manual_texture_view_handle: Option<ManualTextureViewHandle>,
 }
 
@@ -80,12 +81,12 @@ impl BevyRenderer {
 
     pub fn render(
         &mut self,
-        ctx: CustomPaintCtx<'_>,
+        ctx: &mut dyn RenderContext,
         color: [f32; 3],
         width: u32,
         height: u32,
         _start_time: &std::time::Instant,
-    ) -> Option<TextureHandle> {
+    ) -> Option<ResourceId> {
         // Update the UI data.
         if let Some(mut ui) = self.app.world_mut().get_resource_mut::<UIData>() {
             ui.color = color;
@@ -96,10 +97,10 @@ impl BevyRenderer {
         // Run one frame of the Bevy app to render the 3D scene.
         self.app.update();
 
-        self.texture_handle.clone()
+        self.texture_handle
     }
 
-    fn init_texture(&mut self, mut ctx: CustomPaintCtx<'_>, width: u32, height: u32) {
+    fn init_texture(&mut self, ctx: &mut dyn RenderContext, width: u32, height: u32) {
         // Reuse self.texture_handle if already initialized to the correct size.
         let current_size = (width, height);
         if self.texture_handle.is_some() && self.last_texture_size == current_size {
@@ -116,7 +117,7 @@ impl BevyRenderer {
         if let Some(mut manual_texture_views) = world.get_resource_mut::<ManualTextureViews>() {
             // Clean previous texture if any.
             if self.texture_handle.is_some() {
-                ctx.unregister_texture(self.texture_handle.take().unwrap());
+                ctx.unregister_resource(self.texture_handle.take().unwrap());
             }
             if let Some(old_handle) = self.manual_texture_view_handle {
                 manual_texture_views.remove(&old_handle);
@@ -146,17 +147,20 @@ impl BevyRenderer {
             let manual_texture_view = ManualTextureView {
                 texture_view: wgpu_texture_view.into(),
                 size: bevy::math::UVec2::new(width, height),
-                format,
+                view_format: format,
             };
             let manual_texture_view_handle = ManualTextureViewHandle(0);
             manual_texture_views.insert(manual_texture_view_handle, manual_texture_view);
 
-            if let Ok(mut camera) = world.query::<&mut Camera>().single_mut(world) {
-                camera.target = RenderTarget::TextureView(manual_texture_view_handle);
+            if let Ok(mut render_target) = world.query::<&mut RenderTarget>().single_mut(world) {
+                *render_target = RenderTarget::TextureView(manual_texture_view_handle);
 
                 self.last_texture_size = current_size;
                 self.manual_texture_view_handle = Some(manual_texture_view_handle);
-                self.texture_handle = Some(ctx.register_texture(wgpu_texture));
+                self.texture_handle = Some(
+                    ctx.try_register_custom_resource(Box::new(wgpu_texture))
+                        .unwrap(),
+                );
             }
         }
     }

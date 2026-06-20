@@ -3,6 +3,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use bevy::asset::RenderAssetUsages;
+use bevy::core_pipeline::{Core3d, Core3dSystems};
 use bevy::prelude::*;
 use bevy::{
     input::{
@@ -12,9 +13,8 @@ use bevy::{
     },
     render::{
         render_asset::RenderAssets,
-        render_graph::{self, NodeRunError, RenderGraph, RenderGraphContext, RenderLabel},
         render_resource::{Extent3d, TextureDimension, TextureFormat},
-        renderer::{RenderContext, RenderDevice, RenderQueue},
+        renderer::{RenderDevice, RenderQueue},
         texture::GpuImage,
         Extract, RenderApp,
     },
@@ -25,10 +25,12 @@ use anyrender_vello::VelloScenePainter;
 use blitz_dom::{Document as _, DocumentConfig};
 use blitz_paint::paint_scene;
 use blitz_traits::events::{
-    BlitzKeyEvent, BlitzMouseButtonEvent, KeyState, MouseEventButton, MouseEventButtons, UiEvent,
+    BlitzKeyEvent, BlitzPointerEvent, BlitzPointerId, KeyState, MouseEventButton,
+    MouseEventButtons, PointerCoords, PointerDetails, UiEvent,
 };
-use blitz_traits::net::{NetCallback, NetProvider};
+use blitz_traits::net::{NetHandler, NetProvider, NetWaker};
 use blitz_traits::shell::{ColorScheme, Viewport};
+use blitz_traits::SmolStr;
 use bytes::Bytes;
 use crossbeam_channel::{Receiver, Sender};
 use data_url::DataUrl;
@@ -66,8 +68,13 @@ impl<UIProps: std::marker::Send + std::marker::Sync + std::clone::Clone + 'stati
         let mut dioxus_doc = DioxusDocument::new(vdom, DocumentConfig::default());
 
         // Setup NetProvider
-        let net_provider = BevyNetProvider::shared(s.clone());
-        dioxus_doc.set_net_provider(net_provider);
+        let net_provider = BevyNetProvider::shared(Some(Arc::new({
+            let s = s.clone();
+            move |doc_id| {
+                s.send(DioxusMessage::ResourceLoad(doc_id)).unwrap();
+            }
+        })));
+        dioxus_doc.inner_mut().set_net_provider(net_provider);
 
         // Setup DocumentProxy to process CreateHeadElement messages
         let proxy = Rc::new(DioxusDocumentProxy::new(s.clone()));
@@ -76,7 +83,7 @@ impl<UIProps: std::marker::Send + std::marker::Sync + std::clone::Clone + 'stati
         });
 
         dioxus_doc.initial_build();
-        dioxus_doc.resolve(0.0);
+        dioxus_doc.inner_mut().resolve(0.0);
 
         // Dummy waker
         struct NullWake;
@@ -89,8 +96,8 @@ impl<UIProps: std::marker::Send + std::marker::Sync + std::clone::Clone + 'stati
         dioxus_devtools::connect(move |msg| s.send(DioxusMessage::Devserver(msg)).unwrap());
         app.insert_resource(DioxusMessages(r));
 
-        app.insert_non_send_resource(dioxus_doc);
-        app.insert_non_send_resource(waker);
+        app.insert_non_send(dioxus_doc);
+        app.insert_non_send(waker);
         app.insert_resource(epoch);
 
         app.add_systems(Startup, setup_ui);
@@ -112,7 +119,7 @@ impl<UIProps: std::marker::Send + std::marker::Sync + std::clone::Clone + 'stati
         let render_device = render_app.world().resource::<RenderDevice>();
         let device = render_device.wgpu_device();
         let vello_renderer = VelloRenderer::new(device, RendererOptions::default()).unwrap();
-        app.insert_non_send_resource(vello_renderer);
+        app.insert_non_send(vello_renderer);
 
         // Setup communication between main world and render world, to send
         // and receive the texture
@@ -122,10 +129,15 @@ impl<UIProps: std::marker::Send + std::marker::Sync + std::clone::Clone + 'stati
         render_app.add_systems(bevy::render::ExtractSchedule, extract_texture_image);
         render_app.insert_resource(RenderWorldSender(s));
 
-        // Add a render graph node to get the GPU texture
-        let mut graph = render_app.world_mut().resource_mut::<RenderGraph>();
-        graph.add_node(TextureGetterNode, TextureGetterNodeDriver);
-        graph.add_node_edge(bevy::render::graph::CameraDriverLabel, TextureGetterNode);
+        // // Add a render graph node to get the GPU texture
+        // let mut graph = render_app.world_mut().resource_mut::<RenderGraph>();
+        // graph.add_node(TextureGetterNode, TextureGetterNodeDriver);
+        // graph.add_node_edge(bevy::render::graph::CameraDriverLabel, TextureGetterNode);
+
+        render_app.add_systems(
+            Core3d,
+            texture_getter_render_system.after(Core3dSystems::MainPass),
+        );
     }
 }
 
@@ -159,47 +171,73 @@ fn create_ui_texture(width: u32, height: u32) -> Image {
     image
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Hash, RenderLabel)]
-struct TextureGetterNode;
+// #[derive(Debug, PartialEq, Eq, Clone, Hash, RenderLabel)]
+// struct TextureGetterNode;
 
-#[derive(Default)]
-struct TextureGetterNodeDriver;
+// #[derive(Default)]
+// struct TextureGetterNodeDriver;
 
-impl render_graph::Node for TextureGetterNodeDriver {
-    fn update(&mut self, world: &mut World) {
-        // Get the GPU texture from the texture image, and send it to the main world
-        if let Some(sender) = world.get_resource::<RenderWorldSender>() {
-            if let Some(image) = world
-                .get_resource::<ExtractedTextureImage>()
-                .and_then(|e| e.0.as_ref())
-            {
-                if let Some(gpu_images) = world
-                    .get_resource::<RenderAssets<GpuImage>>()
-                    .and_then(|a| a.get(image))
+// impl render_graph::Node for TextureGetterNodeDriver {
+//     fn update(&mut self, world: &mut World) {}
+//     fn run(
+//         &self,
+//         _graph: &mut RenderGraphContext,
+//         _render_context: &mut RenderContext,
+//         _world: &World,
+//     ) -> bevy::prelude::Result<(), NodeRunError> {
+//         Ok(())
+//     }
+// }
+
+fn texture_getter_render_system(
+    sender: Option<Res<RenderWorldSender>>,
+    render_assets: Option<Res<RenderAssets<GpuImage>>>,
+    mut extracted_image: Option<ResMut<ExtractedTextureImage>>,
+) {
+    // Get the GPU texture from the texture image, and send it to the main world
+    if let Some(sender) = sender {
+        if let Some(image) = extracted_image.as_mut() {
+            if let Some(image_id) = image.0.as_ref() {
+                if let Some(gpu_image) = render_assets
+                    .as_ref()
+                    .and_then(|assets| assets.get(image_id))
                 {
+                    let size = gpu_image.size_2d();
                     let _ = sender.send(RenderTexture {
-                        texture_view: (*gpu_images.texture_view).clone(),
-                        width: gpu_images.size.width,
-                        height: gpu_images.size.height,
+                        texture_view: (*gpu_image.texture_view).clone(),
+                        width: size.x,
+                        height: size.y,
                     });
-                    if let Some(mut extracted_image) =
-                        world.get_resource_mut::<ExtractedTextureImage>()
-                    {
-                        // Reset the image, so it is not sent again, unless it changes
-                        extracted_image.0 = None;
-                    }
+                    // Reset the image, so it is not sent again, unless it changes
+                    image.0 = None;
                 }
             }
         }
     }
-    fn run(
-        &self,
-        _graph: &mut RenderGraphContext,
-        _render_context: &mut RenderContext,
-        _world: &World,
-    ) -> bevy::prelude::Result<(), NodeRunError> {
-        Ok(())
-    }
+
+    // // Get the GPU texture from the texture image, and send it to the main world
+    // if let Some(sender) = world.get_resource::<RenderWorldSender>() {
+    //     if let Some(image) = world
+    //         .get_resource::<ExtractedTextureImage>()
+    //         .and_then(|e| e.0.as_ref())
+    //     {
+    //         if let Some(gpu_images) = world
+    //             .get_resource::<RenderAssets<GpuImage>>()
+    //             .and_then(|a| a.get(image))
+    //         {
+    //             let _ = sender.send(RenderTexture {
+    //                 texture_view: (*gpu_images.texture_view).clone(),
+    //                 width: gpu_images.size.width,
+    //                 height: gpu_images.size.height,
+    //             });
+    //             if let Some(mut extracted_image) =
+    //                 world.get_resource_mut::<ExtractedTextureImage>()
+    //             {
+    //                 // Reset the image, so it is not sent again, unless it changes
+    //                 extracted_image.0 = None;
+    //             }
+    //         }
+    //     }
 }
 
 #[derive(Resource)]
@@ -233,7 +271,8 @@ struct HeadElement {
 enum DioxusMessage {
     Devserver(DevserverMsg),
     CreateHeadElement(HeadElement),
-    ResourceLoad(blitz_dom::net::Resource),
+    #[allow(dead_code)]
+    ResourceLoad(usize),
 }
 
 #[derive(Resource, Deref)]
@@ -262,8 +301,10 @@ fn setup_ui(
 
     // Set the initial viewport
     animation_epoch.0 = Instant::now();
-    dioxus_doc.set_viewport(Viewport::new(width, height, SCALE_FACTOR, COLOR_SCHEME));
-    dioxus_doc.resolve(0.0);
+    dioxus_doc
+        .inner_mut()
+        .set_viewport(Viewport::new(width, height, SCALE_FACTOR, COLOR_SCHEME));
+    dioxus_doc.inner_mut().resolve(0.0);
 
     // Create Bevy Image from the texture data
     let image = create_ui_texture(width, height);
@@ -312,7 +353,7 @@ fn update_ui(
                     // Reload changed assets
                     for asset_path in &hotreload_message.assets {
                         if let Some(url) = asset_path.to_str() {
-                            dioxus_doc.reload_resource_by_href(url);
+                            dioxus_doc.inner_mut().reload_resource_by_href(url);
                         }
                     }
                 }
@@ -323,8 +364,8 @@ fn update_ui(
                 dioxus_doc.create_head_element(&el.name, &el.attributes, &el.contents);
                 dioxus_doc.poll(Some(std::task::Context::from_waker(&waker)));
             }
-            DioxusMessage::ResourceLoad(resource) => {
-                dioxus_doc.load_resource(resource);
+            DioxusMessage::ResourceLoad(_) => {
+                // Do nothing
             }
         };
     }
@@ -340,7 +381,7 @@ fn update_ui(
 
         // Refresh the document
         let animation_time = animation_epoch.0.elapsed().as_secs_f64();
-        dioxus_doc.resolve(animation_time);
+        dioxus_doc.inner_mut().resolve(animation_time);
 
         // Create a `vello::Scene` to paint into
         let mut scene = Scene::new();
@@ -348,10 +389,12 @@ fn update_ui(
         // Paint the document
         paint_scene(
             &mut VelloScenePainter::new(&mut scene),
-            &dioxus_doc,
+            &mut dioxus_doc.inner_mut(),
             SCALE_FACTOR as f64,
             texture.width,
             texture.height,
+            0,
+            0,
         );
 
         // Render the `vello::Scene` to the Texture using the `VelloRenderer`
@@ -388,7 +431,12 @@ fn handle_window_resize(
         debug!("Window resized to: {}x{}", width, height);
 
         // Update the dioxus viewport
-        dioxus_doc.set_viewport(Viewport::new(width, height, SCALE_FACTOR, COLOR_SCHEME));
+        dioxus_doc.inner_mut().set_viewport(Viewport::new(
+            width,
+            height,
+            SCALE_FACTOR,
+            COLOR_SCHEME,
+        ));
         // dioxus_doc.resolve();
 
         // Create a new texture with the new size
@@ -420,7 +468,7 @@ pub struct MouseState {
 }
 
 fn does_catch_events(dioxus_doc: &DioxusDocument, node_id: usize) -> bool {
-    if let Some(node) = dioxus_doc.get_node(node_id) {
+    if let Some(node) = dioxus_doc.inner().get_node(node_id) {
         let class = node.attr(blitz_dom::local_name!("class")).unwrap_or("");
         if class
             .split_whitespace()
@@ -453,12 +501,21 @@ fn handle_mouse_events(
     for cursor_event in cursor_moved.read() {
         mouse_state.x = cursor_event.position.x;
         mouse_state.y = cursor_event.position.y;
-        dioxus_doc.handle_ui_event(UiEvent::MouseMove(BlitzMouseButtonEvent {
-            x: mouse_state.x,
-            y: mouse_state.y,
+        dioxus_doc.handle_ui_event(UiEvent::PointerMove(BlitzPointerEvent {
+            id: BlitzPointerId::Mouse,
+            is_primary: true,
+            coords: PointerCoords {
+                client_x: mouse_state.x,
+                client_y: mouse_state.y,
+                page_x: mouse_state.x,
+                page_y: mouse_state.y,
+                screen_x: mouse_state.x,
+                screen_y: mouse_state.y,
+            },
             button: Default::default(),
             buttons: mouse_state.buttons,
             mods: mouse_state.mods,
+            details: PointerDetails::default(),
         }));
     }
 
@@ -478,28 +535,47 @@ fn handle_mouse_events(
         match event.state {
             ButtonState::Pressed => {
                 mouse_state.buttons |= buttons_blitz;
-                dioxus_doc.handle_ui_event(UiEvent::MouseDown(BlitzMouseButtonEvent {
-                    x: mouse_state.x,
-                    y: mouse_state.y,
+                dioxus_doc.handle_ui_event(UiEvent::PointerDown(BlitzPointerEvent {
+                    id: BlitzPointerId::Mouse,
+                    is_primary: true,
+                    coords: PointerCoords {
+                        client_x: mouse_state.x,
+                        client_y: mouse_state.y,
+                        page_x: mouse_state.x,
+                        page_y: mouse_state.y,
+                        screen_x: mouse_state.x,
+                        screen_y: mouse_state.y,
+                    },
                     button: button_blitz,
                     buttons: mouse_state.buttons,
                     mods: mouse_state.mods,
+                    details: PointerDetails::default(),
                 }));
             }
             ButtonState::Released => {
                 mouse_state.buttons &= !buttons_blitz;
-                dioxus_doc.handle_ui_event(UiEvent::MouseUp(BlitzMouseButtonEvent {
-                    x: mouse_state.x,
-                    y: mouse_state.y,
+                dioxus_doc.handle_ui_event(UiEvent::PointerUp(BlitzPointerEvent {
+                    id: BlitzPointerId::Mouse,
+                    is_primary: true,
+                    coords: PointerCoords {
+                        client_x: mouse_state.x,
+                        client_y: mouse_state.y,
+                        page_x: mouse_state.x,
+                        page_y: mouse_state.y,
+                        screen_x: mouse_state.x,
+                        screen_y: mouse_state.y,
+                    },
                     button: button_blitz,
                     buttons: mouse_state.buttons,
                     mods: mouse_state.mods,
+                    details: PointerDetails::default(),
                 }));
             }
         }
     }
 
-    let should_catch_events = dioxus_doc
+    let inner = dioxus_doc.inner();
+    let should_catch_events = inner
         .hit(mouse_state.x, mouse_state.y)
         .map(|hit| does_catch_events(&dioxus_doc, hit.node_id))
         .unwrap_or(false);
@@ -560,7 +636,8 @@ fn handle_keyboard_events(
             is_auto_repeating: event.repeat,
             is_composing: false,
             state: key_state,
-            text: event.text.clone(),
+            // Mismatched versions of SmolStr
+            text: event.text.as_ref().map(SmolStr::new),
         };
 
         match key_state {
@@ -574,6 +651,7 @@ fn handle_keyboard_events(
     }
 
     let should_catch_events = dioxus_doc
+        .inner()
         .hit(last_mouse_state.x, last_mouse_state.y)
         .map(|hit| does_catch_events(&dioxus_doc, hit.node_id))
         .unwrap_or(false);
@@ -647,74 +725,50 @@ impl dioxus::document::Document for DioxusDocumentProxy {
     }
 }
 
-struct BevyNetCallback {
-    sender: Sender<DioxusMessage>,
-}
-
-use blitz_dom::net::Resource as BlitzResource;
-use blitz_traits::net::NetHandler;
-
-impl NetCallback<BlitzResource> for BevyNetCallback {
-    fn call(&self, _doc_id: usize, result: core::result::Result<BlitzResource, Option<String>>) {
-        if let Ok(res) = result {
-            self.sender.send(DioxusMessage::ResourceLoad(res)).unwrap();
-        }
-    }
-}
-
 pub struct BevyNetProvider {
-    callback: Arc<dyn NetCallback<BlitzResource> + 'static>,
+    waker: Option<Arc<dyn NetWaker>>,
 }
 impl BevyNetProvider {
-    fn shared(sender: Sender<DioxusMessage>) -> Arc<dyn NetProvider<BlitzResource>> {
-        Arc::new(Self::new(sender)) as _
+    fn shared(waker: Option<Arc<dyn NetWaker>>) -> Arc<dyn NetProvider> {
+        Arc::new(Self::new(waker)) as _
     }
 
-    fn new(sender: Sender<DioxusMessage>) -> Self {
-        Self {
-            callback: Arc::new(BevyNetCallback { sender }) as _,
-        }
+    fn new(waker: Option<Arc<dyn NetWaker>>) -> Self {
+        Self { waker }
     }
 }
 
-impl NetProvider<BlitzResource> for BevyNetProvider {
+impl NetProvider for BevyNetProvider {
     fn fetch(
         &self,
         doc_id: usize,
         request: blitz_traits::net::Request,
-        handler: Box<dyn NetHandler<BlitzResource>>,
+        handler: Box<dyn NetHandler>,
     ) {
         match request.url.scheme() {
             // Load Dioxus assets
-            "dioxus" => match dioxus_asset_resolver::native::serve_asset(request.url.path()) {
-                Ok(res) => handler.bytes(doc_id, res.into_body().into(), self.callback.clone()),
-                Err(_) => {
-                    self.callback.call(
-                        doc_id,
-                        Err(Some(String::from("Error loading Dioxus asset"))),
-                    );
+            "dioxus" => {
+                if let Ok(res) = dioxus_asset_resolver::native::serve_asset(request.url.path()) {
+                    handler.bytes(request.url.to_string(), res.into_body().into());
                 }
-            },
+            }
             // Decode data URIs
             "data" => {
                 let Ok(data_url) = DataUrl::process(request.url.as_str()) else {
-                    self.callback
-                        .call(doc_id, Err(Some(String::from("Failed to parse data uri"))));
                     return;
                 };
                 let Ok(decoded) = data_url.decode_to_vec() else {
-                    self.callback
-                        .call(doc_id, Err(Some(String::from("Failed to decode data uri"))));
                     return;
                 };
                 let bytes = Bytes::from(decoded.0);
-                handler.bytes(doc_id, bytes, Arc::clone(&self.callback));
+                handler.bytes(request.url.to_string(), bytes);
             }
             // TODO: support http requests
-            _ => {
-                self.callback
-                    .call(doc_id, Err(Some(String::from("UnsupportedScheme"))));
-            }
+            _ => {}
+        }
+
+        if let Some(waker) = &self.waker {
+            waker.wake(doc_id);
         }
     }
 }
