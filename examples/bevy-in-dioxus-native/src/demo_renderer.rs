@@ -97,6 +97,10 @@ impl Widget for DemoWidget {
         self.state = DemoRendererState::Suspended;
     }
 
+    fn requires_redraw(&self) -> bool {
+        true
+    }
+
     fn handle_event(&mut self, event: &UiEvent) {
         let _ = event;
     }
