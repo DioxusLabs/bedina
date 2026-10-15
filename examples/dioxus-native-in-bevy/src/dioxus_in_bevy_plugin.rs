@@ -30,7 +30,7 @@ use blitz_traits::events::{
 };
 use blitz_traits::net::{NetHandler, NetProvider, NetWaker};
 use blitz_traits::shell::{ColorScheme, Viewport};
-use blitz_traits::SmolStr;
+use blitz_traits::{NodeId, SmolStr};
 use bytes::Bytes;
 use crossbeam_channel::{Receiver, Sender};
 use data_url::DataUrl;
@@ -467,7 +467,7 @@ pub struct MouseState {
     pub mods: Modifiers,
 }
 
-fn does_catch_events(dioxus_doc: &DioxusDocument, node_id: usize) -> bool {
+fn does_catch_events(dioxus_doc: &DioxusDocument, node_id: NodeId) -> bool {
     if let Some(node) = dioxus_doc.inner().get_node(node_id) {
         let class = node.attr(blitz_dom::local_name!("class")).unwrap_or("");
         if class
@@ -516,6 +516,8 @@ fn handle_mouse_events(
             buttons: mouse_state.buttons,
             mods: mouse_state.mods,
             details: PointerDetails::default(),
+            element: Default::default(),
+            active_pointers: Default::default(),
         }));
     }
 
@@ -550,6 +552,8 @@ fn handle_mouse_events(
                     buttons: mouse_state.buttons,
                     mods: mouse_state.mods,
                     details: PointerDetails::default(),
+                    element: Default::default(),
+                    active_pointers: Default::default(),
                 }));
             }
             ButtonState::Released => {
@@ -569,6 +573,8 @@ fn handle_mouse_events(
                     buttons: mouse_state.buttons,
                     mods: mouse_state.mods,
                     details: PointerDetails::default(),
+                    element: Default::default(),
+                    active_pointers: Default::default(),
                 }));
             }
         }

@@ -5,17 +5,13 @@ use bevy::{
     prelude::*,
     render::{
         render_resource::TextureFormat,
-        renderer::{
-            RenderAdapter, RenderAdapterInfo, RenderDevice, RenderInstance, RenderQueue,
-            WgpuWrapper,
-        },
-        settings::{RenderCreation, RenderResources},
+        renderer::{RenderAdapter, RenderAdapterInfo, RenderDevice, RenderInstance, RenderQueue},
+        settings::RenderCreation,
         texture::ManualTextureView,
         RenderPlugin,
     },
 };
 use dioxus_native::DeviceHandle;
-use std::sync::Arc;
 
 #[derive(Resource, Default)]
 pub struct UIData {
@@ -38,13 +34,13 @@ impl BevyRenderer {
             DefaultPlugins
                 .set(RenderPlugin {
                     // Reuse the render resources from the Dioxus native renderer.
-                    render_creation: RenderCreation::Manual(RenderResources(
-                        RenderDevice::new(WgpuWrapper::new(device_handle.device.clone())),
-                        RenderQueue(Arc::new(WgpuWrapper::new(device_handle.queue.clone()))),
-                        RenderAdapterInfo(WgpuWrapper::new(device_handle.adapter.get_info())),
-                        RenderAdapter(Arc::new(WgpuWrapper::new(device_handle.adapter.clone()))),
-                        RenderInstance(Arc::new(WgpuWrapper::new(device_handle.instance.clone()))),
-                    )),
+                    render_creation: RenderCreation::manual(
+                        RenderDevice::new(device_handle.device.clone()),
+                        RenderQueue::new(device_handle.queue.clone()),
+                        RenderAdapterInfo::new(device_handle.adapter.get_info()),
+                        RenderAdapter::new(device_handle.adapter.clone()),
+                        RenderInstance::new(device_handle.instance.clone()),
+                    ),
                     synchronous_pipeline_compilation: true,
                     ..default()
                 })

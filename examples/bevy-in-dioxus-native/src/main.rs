@@ -3,6 +3,7 @@ use std::any::Any;
 use color::{palette::css::WHITE, parse_color};
 use color::{OpaqueColor, Srgb};
 use demo_renderer::{DemoMessage, DemoWidget};
+use dioxus_native::prelude::dioxus_html::{elements::prelude::*, html};
 use dioxus_native::{prelude::*, CustomWidgetAttr};
 use wgpu::Limits;
 
