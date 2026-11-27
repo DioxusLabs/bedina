@@ -11,20 +11,20 @@ wgpu = { version = "30.0.1" }
 
 bevy = { version = "0.20.0" }
 
-dioxus = { version = "0.8.0-alpha.2", default-features = false }
-dioxus-asset-resolver = { version = "0.8.0-alpha.2" }
-dioxus-devtools = { version = "0.8.0-alpha.2" }
+dioxus = { version = "=0.8.0-alpha.4", default-features = false }
+dioxus-asset-resolver = { version = "=0.8.0-alpha.4" }
+dioxus-devtools = { version = "=0.8.0-alpha.4" }
 
-blitz-dom = { version = "0.3.0-beta.3", default-features = false }
-blitz-paint = { version = "0.3.0-beta.3" }
-blitz-traits = { version = "0.3.0-beta.3" }
-dioxus-native = { version = "0.8.0-alpha.2" }
-dioxus-native-dom = { version = "0.8.0-alpha.2" }
+blitz-dom = { version = "=0.3.0-beta.6", default-features = false }
+blitz-paint = { version = "=0.3.0-beta.6" }
+blitz-traits = { version = "=0.3.0-beta.6" }
+dioxus-native = { version = "=0.8.0-alpha.4" }
+dioxus-native-dom = { version = "=0.8.0-alpha.4" }
 data-url = "0.3.2"
 
-anyrender = { version = "0.14", default-features = false }
-anyrender_vello = { version = "0.15", default-features = false }
-vello = { version = "0.11", default-features = false }
+anyrender = { version = "0.15", default-features = false }
+anyrender_vello = { version = "0.16", default-features = false }
+vello = { version = "0.12", default-features = false }
 
 color = "0.3.2"
 peniko = "0.6.1"
