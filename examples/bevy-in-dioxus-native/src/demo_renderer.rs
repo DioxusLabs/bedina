@@ -115,7 +115,7 @@ impl Widget for DemoWidget {
     ) -> Scene {
         let mut scene = anyrender::Scene::new();
 
-        use anyrender::PaintRef;
+        use anyrender::{AntiAliasing, PaintRef};
         use peniko::kurbo::{Affine, Rect};
         use peniko::{Fill, ImageBrush, ImageSampler};
 
@@ -134,6 +134,7 @@ impl Widget for DemoWidget {
                 }),
                 None,
                 &Rect::from_origin_size((0.0, 0.0), (width as f64, height as f64)),
+                AntiAliasing::default(),
             );
         } else {
             println!("WANRING: render returned None");
